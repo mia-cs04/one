@@ -46,6 +46,13 @@
       <input type="password" id="new-group-passcode" maxlength="4" placeholder="4-Digit Passcode" onkeydown="handleEnterKey(event, createGroup)">
       <button onclick="createGroup()">Create Group</button>
     </div>
+
+    <!-- SUPER ADMIN PANEL -->
+    <div id="super-admin-card" class="content card hidden">
+      <h3 style="color: #dc2626;">👑 Super Admin: All System Groups</h3>
+      <p style="font-size: 0.85em; color: #64748b;">As Super Admin, you can monitor and enter any group in the database.</p>
+      <div id="all-groups-list"></div>
+    </div>
   </div>
 
   <div id="passcode-modal" class="modal hidden">
