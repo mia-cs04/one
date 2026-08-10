@@ -5,6 +5,9 @@ const SUPABASE_KEY = "eyJhbGciOiJIUzI1NiIsInR5cCI6IkpXVCJ9.eyJpc3MiOiJzdXBhYmFzZ
 const supabaseClient = supabase.createClient(SUPABASE_URL, SUPABASE_KEY);
 const STEALTH_URL = "https://coneqt-s.mountcarmel.tas.edu.au:4430/#?page=/welcome";
 
+// SUPER ADMIN CONFIGURATION
+const SUPER_ADMIN_EMAIL = "miacairns22@gmail.com";
+
 // ADMIN PERMISSIONS DEFAULT
 const ADMIN_PERMISSIONS = {
   canChangeGroupName: true,
@@ -20,9 +23,13 @@ let isSignUpMode = false;
 let userMemberColors = {}; // Stores custom per-member bubble colors
 
 // === HELPER FUNCTIONS ===
+function isSuperAdmin() {
+  return currentUser && currentUser.email && currentUser.email.toLowerCase() === SUPER_ADMIN_EMAIL.toLowerCase();
+}
+
 function isUserAdmin(user, group) {
   if (!user || !group) return false;
-  return group.creator_id === user.id;
+  return isSuperAdmin() || group.creator_id === user.id;
 }
 
 // === ENTER KEY HELPER ===
@@ -287,27 +294,80 @@ function showScreen(screenId) {
 // === GROUPS & PASSCODE ===
 async function loadUserGroups() {
   if (!currentUser) return;
+
+  // 1. Load user's joined groups
   const { data, error } = await supabaseClient.from('group_members').select('group_id, groups(id, name, invite_code, creator_id, passcode)').eq('user_id', currentUser.id);
   const container = document.getElementById('groups-list');
   container.innerHTML = '';
 
   if (error) {
     container.innerHTML = '<p>Error loading groups.</p>';
-    return;
-  }
-
-  if (!data || data.length === 0) {
+  } else if (!data || data.length === 0) {
     container.innerHTML = '<p>No groups joined yet.</p>';
+  } else {
+    data.forEach(item => {
+      if (item.groups) {
+        const btn = document.createElement('button');
+        btn.innerText = item.groups.name;
+        btn.onclick = () => promptPasscode(item.groups);
+        container.appendChild(btn);
+      }
+    });
+  }
+
+  // 2. Load all system groups if user is Super Admin
+  const adminCard = document.getElementById('super-admin-card');
+  if (isSuperAdmin()) {
+    adminCard.classList.remove('hidden');
+    loadAllSystemGroups();
+  } else {
+    adminCard.classList.add('hidden');
+  }
+}
+
+async function loadAllSystemGroups() {
+  const container = document.getElementById('all-groups-list');
+  container.innerHTML = '<p>Loading system groups...</p>';
+
+  const { data: allGroups, error } = await supabaseClient
+    .from('groups')
+    .select('*')
+    .order('created_at', { ascending: false });
+
+  if (error) {
+    container.innerHTML = '<p>Error loading system groups.</p>';
     return;
   }
 
-  data.forEach(item => {
-    if (item.groups) {
-      const btn = document.createElement('button');
-      btn.innerText = item.groups.name;
-      btn.onclick = () => promptPasscode(item.groups);
-      container.appendChild(btn);
-    }
+  if (!allGroups || allGroups.length === 0) {
+    container.innerHTML = '<p>No groups found in database.</p>';
+    return;
+  }
+
+  container.innerHTML = '';
+  allGroups.forEach(group => {
+    const groupDiv = document.createElement('div');
+    groupDiv.style.cssText = "display: flex; justify-content: space-between; align-items: center; margin-bottom: 8px; padding: 8px; background: #f1f5f9; border-radius: 6px;";
+    
+    groupDiv.innerHTML = `
+      <div>
+        <strong>${group.name}</strong><br>
+        <small style="color: #64748b;">Code: ${group.invite_code} | Pass: ${group.passcode}</small>
+      </div>
+    `;
+
+    const enterBtn = document.createElement('button');
+    enterBtn.innerText = "View Chat 👁️";
+    enterBtn.style.cssText = "margin-top: 0; padding: 6px 12px; font-size: 0.85em; background-color: #dc2626;";
+    
+    // Direct access bypass for Super Admin
+    enterBtn.onclick = () => {
+      currentGroup = group;
+      enterChatRoom();
+    };
+
+    groupDiv.appendChild(enterBtn);
+    container.appendChild(groupDiv);
   });
 }
 
