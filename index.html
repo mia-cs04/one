@@ -1,0 +1,135 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+  <meta charset="UTF-8">
+  <meta name="viewport" content="width=device-width, initial-scale=1.0">
+  <title>SEQTA Learn</title>
+  <link id="favicon" rel="icon" href="data:image/svg+xml,<svg xmlns=%22http://www.w3.org/2000/svg%22 viewBox=%220 0 100 100%22><circle cx=%2250%22 cy=%2250%22 r=%2250%22 fill=%22%234a90e2%22/></svg>">
+  <link rel="stylesheet" href="style.css">
+  <script src="https://cdn.jsdelivr.net/npm/@supabase/supabase-js@2"></script>
+</head>
+<body id="app-body">
+
+  <div id="auth-screen" class="screen">
+    <div class="card">
+      <h2 id="auth-title">SEQTA Portal Sign In</h2>
+      <input type="email" id="auth-email" placeholder="Email Address" onkeydown="handleEnterKey(event, handleAuthSubmit)">
+      <input type="password" id="auth-pass" placeholder="Password" onkeydown="handleEnterKey(event, handleAuthSubmit)">
+      <input type="text" id="auth-username" placeholder="Username (for display)" class="hidden" onkeydown="handleEnterKey(event, handleAuthSubmit)">
+      
+      <div id="auth-actions">
+        <button id="auth-submit-btn" onclick="handleAuthSubmit()">Sign In</button>
+        <button id="auth-toggle-btn" onclick="toggleAuthMode()" class="secondary">Need an account? Sign Up</button>
+      </div>
+    </div>
+  </div>
+
+  <div id="menu-screen" class="screen hidden">
+    <header class="top-bar">
+      <h1>My Groups</h1>
+      <div>
+        <button onclick="openThemeModal()">🎨 Theme</button>
+        <button onclick="handleSignOut()" class="secondary">Sign Out</button>
+        <button onpointerdown="triggerStealth()" class="stealth-btn">Exit</button>
+      </div>
+    </header>
+    <div class="content card">
+      <h3>Your Active Groups</h3>
+      <div id="groups-list"></div>
+      <hr>
+      <h3>Join Group with Invite Code</h3>
+      <input type="text" id="join-code" placeholder="Enter Invite Code" onkeydown="handleEnterKey(event, joinGroup)">
+      <button onclick="joinGroup()">Join Group</button>
+      <hr>
+      <h3>Create New Group</h3>
+      <input type="text" id="new-group-name" placeholder="Group Name">
+      <input type="password" id="new-group-passcode" maxlength="4" placeholder="4-Digit Passcode" onkeydown="handleEnterKey(event, createGroup)">
+      <button onclick="createGroup()">Create Group</button>
+    </div>
+  </div>
+
+  <div id="passcode-modal" class="modal hidden">
+    <div class="card">
+      <h3>Enter Group Passcode</h3>
+      <input type="password" id="passcode-input" maxlength="4" placeholder="4 Digits" onkeydown="handleEnterKey(event, verifyPasscode)">
+      <button onclick="verifyPasscode()">Enter</button>
+      <button onclick="closePasscodeModal()" class="secondary">Cancel</button>
+    </div>
+  </div>
+
+  <div id="chat-screen" class="screen hidden">
+    <header class="top-bar">
+      <div class="chat-header-left">
+        <button onclick="leaveChatRoom()">← Menu</button>
+        <span id="group-invite-display" class="invite-badge">Code: ---</span>
+      </div>
+      <h2 id="current-group-title">Group Chat</h2>
+      <div>
+        <button onclick="openThemeModal()">🎨 Theme</button>
+        <button onclick="openMemberColorsModal()">💬 Chat Bubbles</button>
+        <button id="admin-panel-btn" class="hidden" onclick="openAdminModal()">⚙️ Admin</button>
+        <button onpointerdown="triggerStealth()" class="stealth-btn">Exit</button>
+      </div>
+    </header>
+
+    <div id="pinned-container" class="pinned-bar hidden"></div>
+    <div id="messages-container" class="messages-area"></div>
+
+    <div class="chat-input-bar">
+      <input type="text" id="message-input" placeholder="Type a message..." onkeydown="handleEnterKey(event, sendMessage)">
+      <button onclick="sendMessage()">Send</button>
+    </div>
+  </div>
+
+  <div id="member-colors-modal" class="modal hidden">
+    <div class="card" style="max-width: 480px; max-height: 80vh; overflow-y: auto;">
+      <h3>Customise Member Chat Bubbles</h3>
+      <p style="font-size:0.85em; color: #64748b;">Set unique bubble colours for each group member (only visible to you).</p>
+      <div id="member-color-list"></div>
+      <button onclick="saveMemberColorsToAccount()">Save Member Colours</button>
+      <button onclick="closeMemberColorsModal()" class="secondary">Close</button>
+    </div>
+  </div>
+
+  <div id="admin-modal" class="modal hidden">
+    <div class="card">
+      <h3>Admin Dashboard</h3>
+      <div class="admin-tab-group">
+        <label>Rename Group:</label>
+        <input type="text" id="admin-new-name" placeholder="New Group Name" onkeydown="handleEnterKey(event, adminUpdateGroupName)">
+        <button onclick="adminUpdateGroupName()">Update Name</button>
+        <hr>
+        <label>Change Passcode (For Everyone):</label>
+        <input type="password" id="admin-new-pass" maxlength="4" placeholder="New 4-Digit Passcode" onkeydown="handleEnterKey(event, adminUpdatePasscode)">
+        <button onclick="adminUpdatePasscode()">Update Passcode</button>
+      </div>
+      <button onclick="closeAdminModal()" class="secondary">Close</button>
+    </div>
+  </div>
+
+  <div id="theme-modal" class="modal hidden">
+    <div class="card">
+      <h3>Customise Global Appearance</h3>
+      <label>Background Colour:</label>
+      <input type="color" id="theme-bg" value="#f4f6f9" onchange="applyCustomTheme()">
+      
+      <label>Header Colour:</label>
+      <input type="color" id="theme-header" value="#1e293b" onchange="applyCustomTheme()">
+      
+      <label>Text Colour:</label>
+      <input type="color" id="theme-text" value="#0f172a" onchange="applyCustomTheme()">
+      
+      <label>Card Background:</label>
+      <input type="color" id="theme-card" value="#ffffff" onchange="applyCustomTheme()">
+
+      <label>Button / Accent Colour:</label>
+      <input type="color" id="theme-accent" value="#2563eb" onchange="applyCustomTheme()">
+
+      <button onclick="saveThemeToAccount()">Save Theme</button>
+      <button onclick="closeThemeModal()" class="secondary">Close</button>
+    </div>
+  </div>
+
+  <script src="app.js"></script>
+</body>
+</html>
